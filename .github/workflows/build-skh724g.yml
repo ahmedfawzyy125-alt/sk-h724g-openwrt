@@ -33,6 +33,7 @@ jobs:
         run: |
           python3 scripts/patch_sdk.py
           cp scripts/findutils-system.mk src/rtk_openwrt_sdk/tools/findutils/Makefile
+          cp scripts/m4-system.mk src/rtk_openwrt_sdk/tools/m4/Makefile
 
       - name: Install exact Realtek Lexra RSDK
         run: |
