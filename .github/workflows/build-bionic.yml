@@ -1,0 +1,40 @@
+name: Build SK-H724G OpenWrt (Ubuntu 18.04)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/build-bionic.yml'
+      - 'scripts/build_bionic.sh'
+      - 'scripts/patch_sdk.py'
+
+jobs:
+  build-bionic:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build inside Ubuntu 18.04 container
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -w /work \
+            ubuntu:18.04 \
+            bash /work/scripts/build_bionic.sh
+
+      - name: Collect outputs
+        if: always()
+        run: |
+          mkdir -p artifact-bionic
+          find src/rtk_openwrt_sdk/bin -maxdepth 6 -type f -print -exec cp -v {} artifact-bionic/ \; 2>/dev/null || true
+          cp -v src/rtk_openwrt_sdk/build-skh724g.log artifact-bionic/ 2>/dev/null || true
+          sha256sum artifact-bionic/* > artifact-bionic/SHA256SUMS.txt 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: SK-H724G-OpenWrt-bionic-build
+          path: artifact-bionic/
+          if-no-files-found: warn
