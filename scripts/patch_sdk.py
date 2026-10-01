@@ -138,4 +138,10 @@ rep(
     '\t$(call Kernel/SetNoInitramfs)\n\t+$(MAKE) $(KERNEL_MAKEOPTS) olddefconfig\n\trm -rf $(KERNEL_BUILD_DIR)/modules',
 )
 
+
+# Do not register the unused CyaSSL variant's dependency in this SDK build.
+rep('package/libs/ustream-ssl/Makefile',
+    '$(eval $(call BuildPackage,libustream-cyassl))',
+    'ifneq ($(CONFIG_PACKAGE_libustream-cyassl),)\n$(eval $(call BuildPackage,libustream-cyassl))\nendif')
+
 print('SK-H724G SDK patches applied')
