@@ -111,4 +111,18 @@ if 'CXXFLAGS="-O1 -std=gnu++98"' not in s and needle in s:
     s = s.replace(needle, needle + '\t\tCXXFLAGS="-O1 -std=gnu++98" \\\n', 1)
 p.write_text(s)
 
+
+# Escape literal opening braces in legacy Automake regexes for Perl 5.26+.
+p = root / 'tools/automake/Makefile'
+s = p.read_text()
+marker = 'include $(INCLUDE_DIR)/host-build.mk\n'
+command = '''	python3 -c 'from pathlib import Path; p = Path("$(HOST_BUILD_DIR)/automake.in"); s = p.read_text(); old = chr(92)+chr(36)+"{([^ "+chr(92)+"t=:+{}]+)}"; new = chr(92)+chr(36)+chr(92)+"{([^ "+chr(92)+"t=:+{}]+)}"; assert old in s or new in s, "Automake Perl pattern missing"; p.write_text(s.replace(old, new))'\n'''
+# GNU make consumes dollars once before passing the command to the shell.
+command = command.replace(chr(36) + '{', chr(36) * 2 + '{')
+compat = marker + '\ndefine Host/Prepare\n\t$(call Host/Prepare/Default)\n' + command + 'endef\n'
+if 'Automake Perl pattern missing' not in s:
+    if marker not in s:
+        raise RuntimeError('Automake host-build include missing')
+    p.write_text(s.replace(marker, compat, 1))
+
 print('SK-H724G SDK patches applied')
