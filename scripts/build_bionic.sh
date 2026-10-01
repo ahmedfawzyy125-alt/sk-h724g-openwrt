@@ -55,5 +55,5 @@ su -s /bin/bash builder -c '
 
   mkdir -p build_dir/host/firmware-utils/bin
   set -o pipefail
-  make -j1 V=s 2>&1 | tee build-skh724g.log
+  make -j2 V=s 2>&1 | tee build-skh724g.log
 '
