@@ -37,13 +37,23 @@ curl -fL --retry 5 --retry-delay 3 \
 tar -xJf /tmp/rsdk.txz -C staging_dir
 
 cp rtk_deconfig/defconfig_rtl8198c .config
-yes '' | make oldconfig || true
 
-echo '=== SK-H724G target verification ==='
-grep -E 'CONFIG_TARGET_rtkmips_rtl8198c|CONFIG_PACKAGE_kmod-rtl8192cd' .config | head -20 || true
-grep -E 'CONFIG_SLOT_0_8192EE|CONFIG_SLOT_0_8194AE|CONFIG_SLOT_1_8814AE|CONFIG_WLAN_HAL_8192EE' target/linux/rtkmips/rtl8198c/config-3.10
-grep -n '0x81000000' target/linux/rtkmips/image/Makefile
+# The legacy OpenWrt/Realtek SDK explicitly refuses to compile as root.
+# Prepare the tree as root, then run configuration and compilation as a normal user.
+id -u builder >/dev/null 2>&1 || useradd -m -s /bin/bash builder
+chown -R builder:builder /work/src
 
-mkdir -p build_dir/host/firmware-utils/bin
-set -o pipefail
-make -j1 V=s 2>&1 | tee build-skh724g.log
+su -s /bin/bash builder -c '
+  set -euo pipefail
+  cd /work/src/rtk_openwrt_sdk
+  yes "" | make oldconfig || true
+
+  echo "=== SK-H724G target verification ==="
+  grep -E "CONFIG_TARGET_rtkmips_rtl8198c|CONFIG_PACKAGE_kmod-rtl8192cd" .config | head -20 || true
+  grep -E "CONFIG_SLOT_0_8192EE|CONFIG_SLOT_0_8194AE|CONFIG_SLOT_1_8814AE|CONFIG_WLAN_HAL_8192EE" target/linux/rtkmips/rtl8198c/config-3.10
+  grep -n "0x81000000" target/linux/rtkmips/image/Makefile
+
+  mkdir -p build_dir/host/firmware-utils/bin
+  set -o pipefail
+  make -j1 V=s 2>&1 | tee build-skh724g.log
+'
