@@ -1,0 +1,1 @@
+Trigger cloud build for SK-H724G.
