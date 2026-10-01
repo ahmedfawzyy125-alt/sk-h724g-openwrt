@@ -56,8 +56,9 @@ jobs:
       - name: Build firmware
         run: |
           cd src/rtk_openwrt_sdk
+          mkdir -p build_dir/host/firmware-utils/bin
           set -o pipefail
-          make -j2 V=s 2>&1 | tee build-skh724g.log
+          make -j1 V=s 2>&1 | tee build-skh724g.log
 
       - name: Collect outputs
         if: always()
