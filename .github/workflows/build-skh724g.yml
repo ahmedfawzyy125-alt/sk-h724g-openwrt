@@ -32,7 +32,7 @@ jobs:
       - name: Apply SK-H724G and modern-host fixes
         run: |
           python3 scripts/patch_sdk.py
-          sed -i 's#$(SED)#/bin/sed -i -e#g' src/rtk_openwrt_sdk/tools/findutils/Makefile
+          cp scripts/findutils-system.mk src/rtk_openwrt_sdk/tools/findutils/Makefile
 
       - name: Install exact Realtek Lexra RSDK
         run: |
