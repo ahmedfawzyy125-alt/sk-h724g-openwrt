@@ -64,7 +64,7 @@ p.write_text(s)
 p = root / 'package/Makefile'
 s = p.read_text()
 old = '$(curdir)/builddirs:=$(sort $(package-) $(package-y) $(package-m))'
-new = '$(curdir)/builddirs:=base-files firmware/linux-firmware kernel/fastpath kernel/linux kernel/mac80211 kernel/rtl_fs kernel/rtl_nf kernel/rtl_sendfile libs/gettext libs/gmp libs/libiconv libs/libjson-c libs/libnl-tiny libs/libpcap libs/libtool libs/libubox libs/lzo libs/ncurses libs/nettle libs/ocf-crypto-headers libs/openssl libs/polarssl libs/toolchain libs/ustream-ssl libs/zlib network/config/firewall network/config/netifd network/ipv6/odhcp6c network/services/dnsmasq network/services/dropbear network/services/hostapd network/services/igmpproxy network/services/odhcpd network/services/ppp network/services/uhttpd network/utils/iptables network/utils/iw network/utils/iwinfo network/utils/linux-atm network/utils/resolveip network/utils/wireless-tools system/fstools system/mtd system/opkg system/procd system/ubox system/ubus system/uci utils/busybox utils/jsonfilter utils/lua utils/rtk_app utils/ubi-utils utils/util-linux'
+new = '$(curdir)/builddirs:=luci base-files firmware/linux-firmware kernel/fastpath kernel/linux kernel/mac80211 kernel/rtl_fs kernel/rtl_nf kernel/rtl_sendfile libs/gettext libs/gmp libs/libiconv libs/libjson-c libs/libnl-tiny libs/libpcap libs/libtool libs/libubox libs/lzo libs/ncurses libs/nettle libs/ocf-crypto-headers libs/openssl libs/polarssl libs/toolchain libs/ustream-ssl libs/zlib network/config/firewall network/config/netifd network/ipv6/odhcp6c network/services/dnsmasq network/services/dropbear network/services/hostapd network/services/igmpproxy network/services/odhcpd network/services/ppp network/services/uhttpd network/utils/iptables network/utils/iw network/utils/iwinfo network/utils/linux-atm network/utils/resolveip network/utils/wireless-tools system/fstools system/mtd system/opkg system/procd system/ubox system/ubus system/uci utils/busybox utils/jsonfilter utils/lua utils/rtk_app utils/ubi-utils utils/util-linux'
 s = s.replace(old, new)
 p.write_text(s)
 
@@ -144,4 +144,6 @@ rep('package/libs/ustream-ssl/Makefile',
     '$(eval $(call BuildPackage,libustream-cyassl))',
     'ifneq ($(CONFIG_PACKAGE_libustream-cyassl),)\n$(eval $(call BuildPackage,libustream-cyassl))\nendif')
 
+# Lua is now required by LuCI; use the official HTTPS archive endpoint.
+rep('package/utils/lua/Makefile', 'http://www.lua.org/ftp/', 'https://www.lua.org/ftp/')
 print('SK-H724G SDK patches applied')
