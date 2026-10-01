@@ -14,7 +14,7 @@ fi
 apt-get install -y \
   build-essential gawk git subversion wget curl ca-certificates \
   libncurses5-dev zlib1g-dev bison flex unzip xz-utils file patch sed m4 \
-  autoconf automake libtool pkg-config python python-dev \
+  autoconf automake libtool pkg-config python python-dev python3 \
   libc6:i386 libstdc++6:i386 zlib1g:i386
 
 rm -rf /work/src
