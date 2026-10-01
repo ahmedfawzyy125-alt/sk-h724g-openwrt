@@ -130,4 +130,12 @@ if 'Automake Perl pattern missing' not in s:
 rep('scripts/download.pl', 'ftp://ftp.all.kernel.org/pub/$dir', 'https://cdn.kernel.org/pub/$dir')
 rep('scripts/download.pl', 'http://ftp.all.kernel.org/pub/$dir', 'https://mirrors.edge.kernel.org/pub/$dir')
 
+
+# Resolve newly introduced Wi-Fi Kconfig symbols before modules and vermagic.
+rep(
+    'include/kernel-defaults.mk',
+    '\t$(call Kernel/SetNoInitramfs)\n\trm -rf $(KERNEL_BUILD_DIR)/modules',
+    '\t$(call Kernel/SetNoInitramfs)\n\t+$(MAKE) $(KERNEL_MAKEOPTS) olddefconfig\n\trm -rf $(KERNEL_BUILD_DIR)/modules',
+)
+
 print('SK-H724G SDK patches applied')
