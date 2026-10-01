@@ -30,7 +30,9 @@ jobs:
           git checkout d237e45ee480ee7e75c80a4c61e1a335a0a77755
 
       - name: Apply SK-H724G and modern-host fixes
-        run: python3 scripts/patch_sdk.py
+        run: |
+          python3 scripts/patch_sdk.py
+          sed -i 's#$(SED)#/bin/sed -i -e#g' src/rtk_openwrt_sdk/tools/findutils/Makefile
 
       - name: Install exact Realtek Lexra RSDK
         run: |
