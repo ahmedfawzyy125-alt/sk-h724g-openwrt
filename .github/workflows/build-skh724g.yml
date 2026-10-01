@@ -62,6 +62,24 @@ jobs:
           s=s.replace('export DYLD_LIBRARY_PATH:=$(subst ::,:,$(if $(DYLD_LIBRARY_PATH),$(DYLD_LIBRARY_PATH):)$(STAGING_DIR_HOST)/lib)','export DYLD_LIBRARY_PATH:=')
           p.write_text(s)
 
+          # findutils 4.4.2 embeds an old gnulib that breaks on glibc >= 2.28.
+          p=root/'tools/findutils/Makefile'
+          s=p.read_text()
+          marker='include $(INCLUDE_DIR)/host-build.mk\n'
+          compat='''include $(INCLUDE_DIR)/host-build.mk
+
+define Host/Prepare
+\t$(call Host/Prepare/Default)
+\t$(SED) 's/_IO_ftrylockfile/_IO_EOF_SEEN/g' $(HOST_BUILD_DIR)/lib/*.c $(HOST_BUILD_DIR)/gnulib/lib/*.c
+\tprintf '\\n#ifndef _IO_IN_BACKUP\\n#define _IO_IN_BACKUP 0x100\\n#endif\\n' >> $(HOST_BUILD_DIR)/lib/stdio-impl.h
+\tprintf '\\n#ifndef _IO_IN_BACKUP\\n#define _IO_IN_BACKUP 0x100\\n#endif\\n#ifndef _IO_ferror_unlocked\\n#define _IO_ferror_unlocked(_fp) ferror_unlocked(_fp)\\n#endif\\n' >> $(HOST_BUILD_DIR)/gnulib/lib/stdio-impl.h
+\tsed -i '/#include <unistd.h>/a #include <sys/sysmacros.h>' $(HOST_BUILD_DIR)/gnulib/lib/mountlist.c || true
+endef
+'''
+          if 'define Host/Prepare' not in s:
+              s=s.replace(marker,compat,1)
+          p.write_text(s)
+
           # Build only packages required by the known RTL8198C configuration.
           p=root/'package/Makefile'
           s=p.read_text()
