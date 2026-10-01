@@ -43,6 +43,19 @@ git clone --branch luci-0.12 --single-branch https://github.com/openwrt/luci.git
 git -C /work/luci checkout 0d510b28203d33c6969ae5549f37f8b39811dd2e
 mkdir -p package/luci
 sed 's|^LUCI_TOPDIR=.*|LUCI_TOPDIR=/work/luci|' /work/luci/contrib/package/luci/Makefile > package/luci/Makefile
+# SDK package dependency generation includes every registered variant.
+# Register only this image's LuCI components, so unused apps cannot add
+# qos/comgt/relayd/SSL dependencies to the aggregate package build rule.
+python3 - <<'LUCIPY'
+from pathlib import Path
+p = Path("package/luci/Makefile")
+s = p.read_text()
+old = "$(foreach b,$(LUCI_BUILD_PACKAGES),$(eval $(call BuildPackage,$(b))))"
+selected = "luci luci-base luci-lib-nixio luci-mod-admin-full luci-theme-bootstrap luci-app-firewall luci-proto-ppp"
+new = "$(foreach b,$(filter " + selected + ",$(LUCI_BUILD_PACKAGES)),$(eval $(call BuildPackage,$(b))))"
+assert old in s, "Pinned LuCI package registration changed"
+p.write_text(s.replace(old, new))
+LUCIPY
 
 cp rtk_deconfig/defconfig_rtl8198c .config
 cat >> .config <<'CONFIG'
