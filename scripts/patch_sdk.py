@@ -83,7 +83,7 @@ replacements = {
     'package/system/ubox/Makefile': ('git://nbd.name/luci2/ubox.git', 'https://github.com/openwrt/ubox.git'),
     'package/system/ubus/Makefile': ('git://nbd.name/luci2/ubus.git', 'https://github.com/openwrt/ubus.git'),
     'package/system/uci/Makefile': ('git://nbd.name/uci.git', 'https://github.com/openwrt/uci.git'),
-    'tools/mtd-utils/Makefile': ('git://git.infradead.org/mtd-utils.git', 'https://git.infradead.org/mtd-utils.git'),
+    'tools/mtd-utils/Makefile': ('git://git.infradead.org/mtd-utils.git', 'https://github.com/sigma-star/mtd-utils.git'),
 }
 for rel, (a, b) in replacements.items():
     rep(rel, a, b, False)
