@@ -125,4 +125,9 @@ if 'Automake Perl pattern missing' not in s:
         raise RuntimeError('Automake host-build include missing')
     p.write_text(s.replace(marker, compat, 1))
 
+
+# Replace retired kernel.org mirror domain; retain SDK archive checksums.
+rep('scripts/download.pl', 'ftp://ftp.all.kernel.org/pub/$dir', 'https://cdn.kernel.org/pub/$dir')
+rep('scripts/download.pl', 'http://ftp.all.kernel.org/pub/$dir', 'https://mirrors.edge.kernel.org/pub/$dir')
+
 print('SK-H724G SDK patches applied')
