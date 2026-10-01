@@ -119,7 +119,9 @@ assert burn + len(data) <= 0x800000, "Image exceeds conservative 8 MiB test limi
 offset = next((i for i in range(0, len(data), 4096) if data[i:i+4] == b"hsqs"), None)
 assert offset is not None, "No aligned SquashFS rootfs"
 dest = Path("/tmp/skh724g-verified-rootfs")
-subprocess.run(["unsquashfs", "-no-progress", "-d", str(dest), "-o", str(offset), str(image)], check=True)
+squash_image = Path("/tmp/skh724g-rootfs.squashfs")
+squash_image.write_bytes(data[offset:])
+subprocess.run(["unsquashfs", "-no-progress", "-d", str(dest), str(squash_image)], check=True)
 for name in ("www/cgi-bin/luci", "usr/lib/lua/luci/dispatcher.lua",
              "usr/lib/lua/luci/controller/admin/index.lua", "etc/config/uhttpd"):
     assert (dest / name).is_file(), "Missing management file: " + name
