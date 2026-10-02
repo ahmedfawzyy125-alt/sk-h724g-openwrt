@@ -29,6 +29,63 @@ p = root / 'target/linux/rtkmips/image/Makefile'
 s = p.read_text().replace('ttyS0,38400', 'ttyS0,115200').replace('0x80500000', '0x81000000')
 p.write_text(s)
 
+# SK-H724G recovery networking + first-boot Wi-Fi defaults.
+# Keep management reachable on both CPU Ethernet interfaces and explicitly
+# generate/enable wireless configuration on first boot.
+base = root / 'target/linux/rtkmips/base-files'
+(base / 'etc/uci-defaults').mkdir(parents=True, exist_ok=True)
+recovery = base / 'etc/uci-defaults/99-skh724g-connectivity'
+recovery.write_text(r'''#!/bin/sh
+uci -q batch <<'EOF'
+set network.lan='interface'
+set network.lan.type='bridge'
+set network.lan.ifname='eth0 eth1'
+set network.lan.proto='static'
+set network.lan.ipaddr='192.168.1.1'
+set network.lan.netmask='255.255.255.0'
+set dhcp.lan='dhcp'
+set dhcp.lan.interface='lan'
+set dhcp.lan.start='100'
+set dhcp.lan.limit='100'
+set dhcp.lan.leasetime='12h'
+set dhcp.lan.ignore='0'
+EOF
+uci -q commit network
+uci -q commit dhcp
+
+if [ ! -s /etc/config/wireless ]; then
+    wifi detect > /etc/config/wireless 2>/dev/null || true
+fi
+
+for dev in $(uci -q show wireless | sed -n "s/^wireless\.\([^.=]*\)=wifi-device.*/\1/p"); do
+    uci -q set wireless.$dev.disabled='0'
+done
+
+idx=0
+for vif in $(uci -q show wireless | sed -n "s/^wireless\.\([^.=]*\)=wifi-iface.*/\1/p"); do
+    uci -q set wireless.$vif.mode='ap'
+    uci -q set wireless.$vif.network='lan'
+    uci -q set wireless.$vif.encryption='none'
+    if [ "$idx" -eq 0 ]; then
+        uci -q set wireless.$vif.ssid='SK-H724G'
+    else
+        uci -q set wireless.$vif.ssid="SK-H724G-$idx"
+    fi
+    idx=$((idx + 1))
+done
+uci -q commit wireless
+
+/etc/init.d/dnsmasq enable 2>/dev/null || true
+/etc/init.d/uhttpd enable 2>/dev/null || true
+/etc/init.d/network restart 2>/dev/null || true
+/etc/init.d/dnsmasq restart 2>/dev/null || true
+/etc/init.d/uhttpd restart 2>/dev/null || true
+wifi 2>/dev/null || true
+exit 0
+''')
+recovery.chmod(0o755)
+
+
 # Do not inject legacy staging libraries into modern host /bin/sh.
 p = root / 'include/toplevel.mk'
 s = p.read_text()
@@ -116,7 +173,7 @@ p.write_text(s)
 p = root / 'tools/automake/Makefile'
 s = p.read_text()
 marker = 'include $(INCLUDE_DIR)/host-build.mk\n'
-command = '''	python3 -c 'from pathlib import Path; p = Path("$(HOST_BUILD_DIR)/automake.in"); s = p.read_text(); old = chr(92)+chr(36)+"{([^ "+chr(92)+"t=:+{}]+)}"; new = chr(92)+chr(36)+chr(92)+"{([^ "+chr(92)+"t=:+{}]+)}"; assert old in s or new in s, "Automake Perl pattern missing"; p.write_text(s.replace(old, new))'\n'''
+command = '''\tpython3 -c 'from pathlib import Path; p = Path("$(HOST_BUILD_DIR)/automake.in"); s = p.read_text(); old = chr(92)+chr(36)+"{([^ "+chr(92)+"t=:+{}]+)}"; new = chr(92)+chr(36)+chr(92)+"{([^ "+chr(92)+"t=:+{}]+)}"; assert old in s or new in s, "Automake Perl pattern missing"; p.write_text(s.replace(old, new))'\n'''
 # GNU make consumes dollars once before passing the command to the shell.
 command = command.replace(chr(36) + '{', chr(36) * 2 + '{')
 compat = marker + '\ndefine Host/Prepare\n\t$(call Host/Prepare/Default)\n' + command + 'endef\n'
