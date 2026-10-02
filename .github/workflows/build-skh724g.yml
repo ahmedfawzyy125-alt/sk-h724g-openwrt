@@ -37,6 +37,7 @@ jobs:
           cp scripts/m4-system.mk src/rtk_openwrt_sdk/tools/m4/Makefile
           python3 scripts/fix_bison.py
           python3 scripts/fix_mklibs_makefile.py
+          cp scripts/cmake-2.8-modern-gcc.patch src/rtk_openwrt_sdk/tools/cmake/patches/998-modern-gcc-const-comparator.patch
 
           # e2fsprogs 1.42.8 expects makedev() from old glibc headers.
           # Modern glibc exposes it from <sys/sysmacros.h>.
@@ -66,6 +67,8 @@ jobs:
           cat src/rtk_openwrt_sdk/tools/e2fsprogs/patches/999-modern-glibc-sysmacros.patch
           echo '--- mtd-utils modern glibc flags ---'
           grep -n 'HOST_CFLAGS' src/rtk_openwrt_sdk/tools/mtd-utils/Makefile
+          echo '--- cmake modern GCC patch ---'
+          cat src/rtk_openwrt_sdk/tools/cmake/patches/998-modern-gcc-const-comparator.patch
 
       - name: Verify superchannel patch
         run: |
