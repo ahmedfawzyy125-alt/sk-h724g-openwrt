@@ -32,6 +32,7 @@ jobs:
       - name: Apply SK-H724G and modern-host fixes
         run: |
           python3 scripts/patch_sdk.py
+          python3 scripts/patch_connectivity.py
           python3 scripts/patch_superchannel.py
           cp scripts/findutils-system.mk src/rtk_openwrt_sdk/tools/findutils/Makefile
           cp scripts/m4-system.mk src/rtk_openwrt_sdk/tools/m4/Makefile
@@ -94,6 +95,8 @@ jobs:
           grep -n 'MAX_CHANNEL_NUM' src/rtk_openwrt_sdk/target/linux/rtkmips/files/drivers/net/wireless/rtl8192cd/8192cd_cfg.h | head
           grep -n '5M10M' src/rtk_openwrt_sdk/target/linux/rtkmips/files/drivers/net/wireless/rtl8192cd/8192cd_util.c | head
           grep -n 'SKH724G_SUPERCHANNEL_MAP' src/rtk_openwrt_sdk/target/linux/rtkmips/files/drivers/net/wireless/rtl8192cd/8192cd_comapi.c
+          test -x src/rtk_openwrt_sdk/target/linux/rtkmips/base-files/etc/init.d/skh724g-connectivity
+          test -x src/rtk_openwrt_sdk/target/linux/rtkmips/base-files/etc/uci-defaults/99-skh724g-connectivity-late
 
       - name: Install exact Realtek Lexra RSDK
         run: |
@@ -110,7 +113,7 @@ jobs:
           cd src/rtk_openwrt_sdk
           cp rtk_deconfig/defconfig_rtl8198c .config
           yes '' | make oldconfig || true
-          grep -E 'CONFIG_TARGET_rtkmips_rtl8198c|CONFIG_PACKAGE_kmod-rtl8192cd' .config | head -20
+          grep -E 'CONFIG_TARGET_rtkmips_rtl8198c|CONFIG_PACKAGE_kmod-rtl8192cd|CONFIG_PACKAGE_rtk_app' .config | head -20
           grep -E 'CONFIG_SLOT_0_8192EE|CONFIG_SLOT_0_8194AE|CONFIG_SLOT_1_8814AE|CONFIG_WLAN_HAL_8192EE' target/linux/rtkmips/rtl8198c/config-3.10
           grep -n '0x81000000' target/linux/rtkmips/image/Makefile
 
