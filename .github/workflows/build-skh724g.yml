@@ -36,19 +36,6 @@ jobs:
           cp scripts/findutils-system.mk src/rtk_openwrt_sdk/tools/findutils/Makefile
           cp scripts/m4-system.mk src/rtk_openwrt_sdk/tools/m4/Makefile
           python3 scripts/fix_bison.py
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('src/rtk_openwrt_sdk/tools/mklibs/Makefile')
-          s = p.read_text()
-          marker = 'HOST_CFLAGS += -I$(CURDIR)/include\n'
-          fix = marker + 'HOST_CXXFLAGS += -std=gnu++11\n'
-          if 'HOST_CXXFLAGS += -std=gnu++11' not in s:
-              if marker not in s:
-                  raise RuntimeError('mklibs HOST_CFLAGS marker missing')
-              s = s.replace(marker, fix, 1)
-              p.write_text(s)
-          print('mklibs C++11 compatibility flag applied')
-          PY
 
       - name: Verify superchannel patch
         run: |
@@ -74,6 +61,22 @@ jobs:
           grep -E 'CONFIG_TARGET_rtkmips_rtl8198c|CONFIG_PACKAGE_kmod-rtl8192cd' .config | head -20
           grep -E 'CONFIG_SLOT_0_8192EE|CONFIG_SLOT_0_8194AE|CONFIG_SLOT_1_8814AE|CONFIG_WLAN_HAL_8192EE' target/linux/rtkmips/rtl8198c/config-3.10
           grep -n '0x81000000' target/linux/rtkmips/image/Makefile
+
+      - name: Patch mklibs 0.1.35 for modern GCC
+        run: |
+          cd src/rtk_openwrt_sdk
+          make tools/mklibs/prepare V=s
+          mklibs_dir="$(find build_dir/host -maxdepth 1 -type d -name 'mklibs-0.1.35*' -print -quit)"
+          test -n "$mklibs_dir" || { echo 'ERROR: mklibs source directory not found'; exit 1; }
+          echo "Patching $mklibs_dir"
+          find "$mklibs_dir" -type f \( -name '*.cpp' -o -name '*.cc' -o -name '*.h' -o -name '*.hpp' \) \
+            -exec sed -i -E 's/[[:space:]]+throw[[:space:]]*\([^)]*\)//g' {} +
+          if grep -RInE 'throw[[:space:]]*\([^)]*\)' "$mklibs_dir" \
+            --include='*.cpp' --include='*.cc' --include='*.h' --include='*.hpp'; then
+            echo 'ERROR: dynamic exception specifications remain in mklibs'
+            exit 1
+          fi
+          echo 'mklibs dynamic exception specifications removed successfully'
 
       - name: Build firmware
         run: |
