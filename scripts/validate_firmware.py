@@ -40,7 +40,26 @@ out = Path('/tmp/skh724g-rootfs-verify')
 if out.exists():
     shutil.rmtree(out)
 sq.write_bytes(data[rootfs_offset:-4])
-subprocess.run(['unsquashfs', '-no-progress', '-d', str(out), str(sq)], check=True)
+
+# GitHub hosted runners are non-root. unsquashfs successfully extracts normal
+# files but exits 2 when it cannot recreate /dev/console. Accept only that
+# specific non-root device-node warning; reject every other extraction error.
+proc = subprocess.run(
+    ['unsquashfs', '-no-progress', '-d', str(out), str(sq)],
+    text=True,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.STDOUT,
+)
+print(proc.stdout)
+if proc.returncode != 0:
+    expected = (
+        proc.returncode == 2
+        and 'could not create character device' in proc.stdout
+        and "because you're not superuser" in proc.stdout
+    )
+    if not expected:
+        raise SystemExit(f'unsquashfs failed with exit status {proc.returncode}')
+    print('NOTE: ignored expected non-root /dev node extraction warning')
 
 required = [
     'etc/init.d/skh724g-connectivity',
