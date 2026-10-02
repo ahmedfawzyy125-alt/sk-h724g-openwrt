@@ -20,7 +20,7 @@ jobs:
           sudo dpkg --add-architecture i386
           sudo apt-get update
           sudo apt-get install -y build-essential gawk git subversion wget curl ca-certificates \
-            libncurses5-dev zlib1g-dev bison flex unzip xz-utils file patch sed m4 scons \
+            libncurses5-dev zlib1g-dev bison flex unzip xz-utils file patch sed m4 scons squashfs-tools \
             autoconf automake libtool pkg-config libc6:i386 zlib1g:i386
 
       - name: Fetch pinned Realtek SDK source
@@ -41,8 +41,6 @@ jobs:
           python3 scripts/fix_mklibs_makefile.py
           cp scripts/cmake-2.8-modern-gcc.patch src/rtk_openwrt_sdk/tools/cmake/patches/998-modern-gcc-const-comparator.patch
 
-          # e2fsprogs 1.42.8 expects makedev() from old glibc headers.
-          # Modern glibc exposes it from <sys/sysmacros.h>.
           cat > src/rtk_openwrt_sdk/tools/e2fsprogs/patches/999-modern-glibc-sysmacros.patch <<'PATCH'
           --- a/lib/blkid/devname.c
           +++ b/lib/blkid/devname.c
@@ -58,18 +56,12 @@ jobs:
            #include <sys/stat.h>
           PATCH
 
-          # mtd-utils 1.4.5 assumes major()/minor() and llseek() from older libc APIs.
-          # Force modern sysmacros and map llseek to lseek; _FILE_OFFSET_BITS=64 is already set.
           sed -i '/^HOST_CFLAGS += -I$(STAGING_DIR_HOST)\/include\/e2fsprogs$/a HOST_CFLAGS += -include sys/sysmacros.h\nHOST_CFLAGS += -Dllseek=lseek' \
             src/rtk_openwrt_sdk/tools/mtd-utils/Makefile
 
-          # squashfs-tools 4.2 expects major()/minor() from old glibc headers.
-          # Inject the modern Linux sysmacros header into the host compile only.
           sed -i 's#EXTRA_CFLAGS="-I$(STAGING_DIR_HOST)/include"#EXTRA_CFLAGS="-I$(STAGING_DIR_HOST)/include -include sys/sysmacros.h"#' \
             src/rtk_openwrt_sdk/tools/squashfs4/Makefile
 
-          # GDB 7.6 uses internal CPython APIs that are incompatible with Python 3.10.
-          # Python support is not required to build or flash this firmware, so disable it.
           sed -i '/--without-included-gettext \\/a\		--without-python \\' \
             src/rtk_openwrt_sdk/toolchain/gdb/Makefile
 
@@ -90,13 +82,15 @@ jobs:
           scons --version | head -5
           cat src/rtk_openwrt_sdk/tools/scons/Makefile
 
-      - name: Verify superchannel patch
+      - name: Verify superchannel and connectivity patches
         run: |
           grep -n 'MAX_CHANNEL_NUM' src/rtk_openwrt_sdk/target/linux/rtkmips/files/drivers/net/wireless/rtl8192cd/8192cd_cfg.h | head
           grep -n '5M10M' src/rtk_openwrt_sdk/target/linux/rtkmips/files/drivers/net/wireless/rtl8192cd/8192cd_util.c | head
           grep -n 'SKH724G_SUPERCHANNEL_MAP' src/rtk_openwrt_sdk/target/linux/rtkmips/files/drivers/net/wireless/rtl8192cd/8192cd_comapi.c
           test -x src/rtk_openwrt_sdk/target/linux/rtkmips/base-files/etc/init.d/skh724g-connectivity
           test -x src/rtk_openwrt_sdk/target/linux/rtkmips/base-files/etc/uci-defaults/99-skh724g-connectivity-late
+          grep -q 'modprobe rtl8192cd' src/rtk_openwrt_sdk/target/linux/rtkmips/base-files/etc/init.d/skh724g-connectivity
+          grep -q 'rtk_txcalr -w' src/rtk_openwrt_sdk/target/linux/rtkmips/base-files/etc/init.d/skh724g-connectivity
 
       - name: Install exact Realtek Lexra RSDK
         run: |
@@ -123,6 +117,10 @@ jobs:
           mkdir -p build_dir/host/firmware-utils/bin
           set -o pipefail
           make -j1 V=s 2>&1 | tee build-skh724g.log
+
+      - name: Validate firmware against working upgrade baseline
+        run: |
+          python3 scripts/validate_firmware.py
 
       - name: Collect outputs
         if: always()
