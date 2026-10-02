@@ -36,6 +36,19 @@ jobs:
           cp scripts/findutils-system.mk src/rtk_openwrt_sdk/tools/findutils/Makefile
           cp scripts/m4-system.mk src/rtk_openwrt_sdk/tools/m4/Makefile
           python3 scripts/fix_bison.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/rtk_openwrt_sdk/tools/mklibs/Makefile')
+          s = p.read_text()
+          marker = 'HOST_CFLAGS += -I$(CURDIR)/include\n'
+          fix = marker + 'HOST_CXXFLAGS += -std=gnu++11\n'
+          if 'HOST_CXXFLAGS += -std=gnu++11' not in s:
+              if marker not in s:
+                  raise RuntimeError('mklibs HOST_CFLAGS marker missing')
+              s = s.replace(marker, fix, 1)
+              p.write_text(s)
+          print('mklibs C++11 compatibility flag applied')
+          PY
 
       - name: Verify superchannel patch
         run: |
