@@ -55,10 +55,17 @@ jobs:
            #include <sys/stat.h>
           PATCH
 
+          # mtd-utils 1.4.5 also assumes major()/minor() come from old glibc headers.
+          # Force-include sys/sysmacros.h for its host tools on modern Linux.
+          sed -i '/^HOST_CFLAGS += -I$(STAGING_DIR_HOST)\/include\/e2fsprogs$/a HOST_CFLAGS += -include sys/sysmacros.h' \
+            src/rtk_openwrt_sdk/tools/mtd-utils/Makefile
+
           echo '--- persistent mklibs Host/Prepare patch ---'
           grep -n -A12 -B3 'define Host/Prepare' src/rtk_openwrt_sdk/tools/mklibs/Makefile
           echo '--- e2fsprogs modern glibc patch ---'
           cat src/rtk_openwrt_sdk/tools/e2fsprogs/patches/999-modern-glibc-sysmacros.patch
+          echo '--- mtd-utils modern glibc flags ---'
+          grep -n 'HOST_CFLAGS' src/rtk_openwrt_sdk/tools/mtd-utils/Makefile
 
       - name: Verify superchannel patch
         run: |
