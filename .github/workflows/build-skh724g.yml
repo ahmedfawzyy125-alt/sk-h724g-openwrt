@@ -20,7 +20,7 @@ jobs:
           sudo dpkg --add-architecture i386
           sudo apt-get update
           sudo apt-get install -y build-essential gawk git subversion wget curl ca-certificates \
-            libncurses5-dev zlib1g-dev bison flex unzip xz-utils file patch sed m4 \
+            libncurses5-dev zlib1g-dev bison flex unzip xz-utils file patch sed m4 scons \
             autoconf automake libtool pkg-config libc6:i386 zlib1g:i386
 
       - name: Fetch pinned Realtek SDK source
@@ -35,6 +35,7 @@ jobs:
           python3 scripts/patch_superchannel.py
           cp scripts/findutils-system.mk src/rtk_openwrt_sdk/tools/findutils/Makefile
           cp scripts/m4-system.mk src/rtk_openwrt_sdk/tools/m4/Makefile
+          cp scripts/scons-system.mk src/rtk_openwrt_sdk/tools/scons/Makefile
           python3 scripts/fix_bison.py
           python3 scripts/fix_mklibs_makefile.py
           cp scripts/cmake-2.8-modern-gcc.patch src/rtk_openwrt_sdk/tools/cmake/patches/998-modern-gcc-const-comparator.patch
@@ -69,6 +70,10 @@ jobs:
           grep -n 'HOST_CFLAGS' src/rtk_openwrt_sdk/tools/mtd-utils/Makefile
           echo '--- cmake modern GCC patch ---'
           cat src/rtk_openwrt_sdk/tools/cmake/patches/998-modern-gcc-const-comparator.patch
+          echo '--- system SCons ---'
+          command -v scons
+          scons --version | head -5
+          cat src/rtk_openwrt_sdk/tools/scons/Makefile
 
       - name: Verify superchannel patch
         run: |
