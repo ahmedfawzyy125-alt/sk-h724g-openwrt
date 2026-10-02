@@ -37,8 +37,28 @@ jobs:
           cp scripts/m4-system.mk src/rtk_openwrt_sdk/tools/m4/Makefile
           python3 scripts/fix_bison.py
           python3 scripts/fix_mklibs_makefile.py
+
+          # e2fsprogs 1.42.8 expects makedev() from old glibc headers.
+          # Modern glibc exposes it from <sys/sysmacros.h>.
+          cat > src/rtk_openwrt_sdk/tools/e2fsprogs/patches/999-modern-glibc-sysmacros.patch <<'PATCH'
+          --- a/lib/blkid/devname.c
+          +++ b/lib/blkid/devname.c
+          @@ -22,6 +22,9 @@
+           #if HAVE_SYS_TYPES_H
+           #include <sys/types.h>
+           #endif
+          +#if defined(__linux__)
+          +#include <sys/sysmacros.h>
+          +#endif
+           #include <dirent.h>
+           #if HAVE_SYS_STAT_H
+           #include <sys/stat.h>
+          PATCH
+
           echo '--- persistent mklibs Host/Prepare patch ---'
           grep -n -A12 -B3 'define Host/Prepare' src/rtk_openwrt_sdk/tools/mklibs/Makefile
+          echo '--- e2fsprogs modern glibc patch ---'
+          cat src/rtk_openwrt_sdk/tools/e2fsprogs/patches/999-modern-glibc-sysmacros.patch
 
       - name: Verify superchannel patch
         run: |
