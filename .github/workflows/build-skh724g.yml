@@ -55,9 +55,9 @@ jobs:
            #include <sys/stat.h>
           PATCH
 
-          # mtd-utils 1.4.5 also assumes major()/minor() come from old glibc headers.
-          # Force-include sys/sysmacros.h for its host tools on modern Linux.
-          sed -i '/^HOST_CFLAGS += -I$(STAGING_DIR_HOST)\/include\/e2fsprogs$/a HOST_CFLAGS += -include sys/sysmacros.h' \
+          # mtd-utils 1.4.5 assumes major()/minor() and llseek() from older libc APIs.
+          # Force modern sysmacros and map llseek to lseek; _FILE_OFFSET_BITS=64 is already set.
+          sed -i '/^HOST_CFLAGS += -I$(STAGING_DIR_HOST)\/include\/e2fsprogs$/a HOST_CFLAGS += -include sys/sysmacros.h\nHOST_CFLAGS += -Dllseek=lseek' \
             src/rtk_openwrt_sdk/tools/mtd-utils/Makefile
 
           echo '--- persistent mklibs Host/Prepare patch ---'
