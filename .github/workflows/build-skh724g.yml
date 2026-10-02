@@ -102,6 +102,10 @@ jobs:
               s = s.replace(old, new)
           p.write_text(s)
           PY
+          mkdir -p src/rtk_openwrt_sdk/target/linux/rtkmips/base-files/www
+          cat > src/rtk_openwrt_sdk/target/linux/rtkmips/base-files/www/index.html <<'HTML'
+          <!doctype html><html><head><meta http-equiv="refresh" content="0;url=/cgi-bin/luci"></head><body><a href="/cgi-bin/luci">Open LuCI</a></body></html>
+          HTML
 
       - name: Configure RTL8198C and LuCI
         run: |
@@ -144,10 +148,8 @@ jobs:
           test -f "$ROOT/www/cgi-bin/luci"
           test -f "$ROOT/usr/lib/lua/luci/dispatcher.lua"
           test -f "$ROOT/etc/config/uhttpd"
-          mkdir -p "$ROOT/www"
-          cat > "$ROOT/www/index.html" <<'HTML'
-          <!doctype html><html><head><meta http-equiv="refresh" content="0;url=/cgi-bin/luci"></head><body><a href="/cgi-bin/luci">Open LuCI</a></body></html>
-          HTML
+          test -f "$ROOT/www/index.html"
+          grep -q '/cgi-bin/luci' "$ROOT/www/index.html"
 
       - name: Collect outputs
         if: always()
