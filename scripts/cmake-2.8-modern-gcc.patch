@@ -1,0 +1,5 @@
+--- a/Source/CTest/cmCTestBuildHandler.cxx
++++ b/Source/CTest/cmCTestBuildHandler.cxx
+@@ -1,1 +1,1 @@
+-  bool operator()(std::string const& l, std::string const& r)
++  bool operator()(std::string const& l, std::string const& r) const
