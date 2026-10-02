@@ -67,6 +67,11 @@ jobs:
           sed -i 's#EXTRA_CFLAGS="-I$(STAGING_DIR_HOST)/include"#EXTRA_CFLAGS="-I$(STAGING_DIR_HOST)/include -include sys/sysmacros.h"#' \
             src/rtk_openwrt_sdk/tools/squashfs4/Makefile
 
+          # GDB 7.6 uses internal CPython APIs that are incompatible with Python 3.10.
+          # Python support is not required to build or flash this firmware, so disable it.
+          sed -i '/--without-included-gettext \\/a\		--without-python \\' \
+            src/rtk_openwrt_sdk/toolchain/gdb/Makefile
+
           echo '--- persistent mklibs Host/Prepare patch ---'
           grep -n -A12 -B3 'define Host/Prepare' src/rtk_openwrt_sdk/tools/mklibs/Makefile
           echo '--- e2fsprogs modern glibc patch ---'
@@ -75,6 +80,8 @@ jobs:
           grep -n 'HOST_CFLAGS' src/rtk_openwrt_sdk/tools/mtd-utils/Makefile
           echo '--- squashfs4 modern glibc flags ---'
           grep -n 'EXTRA_CFLAGS' src/rtk_openwrt_sdk/tools/squashfs4/Makefile
+          echo '--- GDB configure without Python ---'
+          grep -n -A4 -B4 -- '--without-python' src/rtk_openwrt_sdk/toolchain/gdb/Makefile
           echo '--- cmake modern GCC patch ---'
           cat src/rtk_openwrt_sdk/tools/cmake/patches/998-modern-gcc-const-comparator.patch
           echo '--- system SCons ---'
