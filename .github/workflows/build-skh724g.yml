@@ -36,37 +36,8 @@ jobs:
           cp scripts/findutils-system.mk src/rtk_openwrt_sdk/tools/findutils/Makefile
           cp scripts/m4-system.mk src/rtk_openwrt_sdk/tools/m4/Makefile
           python3 scripts/fix_bison.py
-
-          # Make the mklibs fix part of Host/Prepare itself. OpenWrt deletes and
-          # re-extracts build_dir/host/mklibs-0.1.35, so patching build_dir in a
-          # separate Actions step is not persistent.
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('src/rtk_openwrt_sdk/tools/mklibs/Makefile')
-          s = p.read_text()
-          marker = 'HOST_LDFLAGS += $(HOST_STATIC_LINKING)\n'
-          block = r'''
-
-# mklibs 0.1.35 uses C++ dynamic exception specifications such as
-# throw(std::bad_alloc). GCC in the modern GitHub runner defaults to a
-# language mode where those declarations are rejected. Apply the source
-# compatibility edit after every unpack, so a later OpenWrt re-prepare
-# cannot restore the unpatched sources.
-define Host/Prepare
-	$(call Host/Prepare/Default)
-	find $(HOST_BUILD_DIR) -type f \( -name '*.cpp' -o -name '*.cc' -o -name '*.h' -o -name '*.hpp' \) -exec sed -i -E 's/[[:space:]]+throw[[:space:]]*\([^)]*\)//g' {} +
-	@if grep -RInE 'throw[[:space:]]*\([^)]*\)' $(HOST_BUILD_DIR) --include='*.cpp' --include='*.cc' --include='*.h' --include='*.hpp'; then echo 'ERROR: dynamic exception specifications remain in mklibs'; exit 1; else echo 'mklibs modern-GCC source fix applied'; fi
-endef
-'''
-          if 'mklibs modern-GCC source fix applied' not in s:
-              if marker not in s:
-                  raise RuntimeError('mklibs Makefile insertion marker missing')
-              s = s.replace(marker, marker + block, 1)
-              p.write_text(s)
-          print('Persistent mklibs Host/Prepare compatibility fix installed')
-          PY
-
-          echo '--- patched mklibs Makefile ---'
+          python3 scripts/fix_mklibs_makefile.py
+          echo '--- persistent mklibs Host/Prepare patch ---'
           grep -n -A12 -B3 'define Host/Prepare' src/rtk_openwrt_sdk/tools/mklibs/Makefile
 
       - name: Verify superchannel patch
