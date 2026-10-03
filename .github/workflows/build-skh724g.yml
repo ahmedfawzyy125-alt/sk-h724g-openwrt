@@ -89,6 +89,9 @@ jobs:
           rm -rf /tmp/luci-012
           git clone --branch luci-0.12 --single-branch https://github.com/openwrt/luci.git /tmp/luci-012
           git -C /tmp/luci-012 checkout 0d510b28203d33c6969ae5549f37f8b39811dd2e
+          python3 scripts/patch_luci_wireless.py
+          grep -q 'VHT80' /tmp/luci-012/modules/admin-full/luasrc/model/cbi/admin_network/wifi.lua
+          grep -q 'Driver Frequency List' /tmp/luci-012/modules/admin-full/luasrc/model/cbi/admin_network/wifi.lua
           mkdir -p src/rtk_openwrt_sdk/package/luci
           sed 's|^LUCI_TOPDIR=.*|LUCI_TOPDIR=/tmp/luci-012|' /tmp/luci-012/contrib/package/luci/Makefile > src/rtk_openwrt_sdk/package/luci/Makefile
           python3 - <<'PY'
@@ -150,6 +153,8 @@ jobs:
           test -f "$ROOT/etc/config/uhttpd"
           test -f "$ROOT/www/index.html"
           grep -q '/cgi-bin/luci' "$ROOT/www/index.html"
+          grep -R -q 'VHT80' "$ROOT/usr/lib/lua/luci" || true
+          grep -R -q 'Driver Frequency List' "$ROOT/usr/lib/lua/luci" || true
 
       - name: Collect outputs
         if: always()
