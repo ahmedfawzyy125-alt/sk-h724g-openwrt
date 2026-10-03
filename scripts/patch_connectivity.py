@@ -23,8 +23,6 @@ start() {
     echo "SK-H724G connectivity recovery start"
     date
 
-    # LAN hard fallback: repair br-lan first so management stays reachable
-    # even if legacy netifd/switch initialization is late.
     ifconfig eth0 up 2>/dev/null || true
     ifconfig eth1 up 2>/dev/null || true
     brctl addbr br-lan 2>/dev/null || true
@@ -59,13 +57,8 @@ EOF
     /etc/init.d/uhttpd enable 2>/dev/null || true
     /etc/init.d/uhttpd restart 2>/dev/null || true
 
-    # Explicitly retry the Realtek WLAN module. AutoProbe should normally do
-    # this, but the failed image showed no broadcast at all.
     modprobe rtl8192cd 2>/dev/null || insmod rtl8192cd 2>/dev/null || true
 
-    # Wait up to 60 seconds for vendor wlan/PHY registration. Once wlan is
-    # present, rerun Realtek TX calibration at the correct time; stock rtk_app
-    # can execute before the radio has finished registering.
     tries=0
     while [ "$tries" -lt 20 ]; do
         tries=$((tries + 1))
@@ -107,25 +100,15 @@ EOF
                 uci -q set wireless.$sec.mode='ap'
                 uci -q set wireless.$sec.network='lan'
                 uci -q set wireless.$sec.encryption='none'
-                if [ "$n" -eq 0 ]; then
-                    uci -q set wireless.$sec.ssid='SK-H724G'
-                else
-                    uci -q set wireless.$sec.ssid="SK-H724G-$n"
-                fi
+                # Keep the driver's/default SSID if one is provided later;
+                # do not force a custom SK-H724G name.
                 n=$((n + 1))
             done
         else
-            n=0
             for vif in $vifs; do
                 uci -q set wireless.$vif.mode='ap'
                 uci -q set wireless.$vif.network='lan'
-                uci -q set wireless.$vif.encryption='none'
-                if [ "$n" -eq 0 ]; then
-                    uci -q set wireless.$vif.ssid='SK-H724G'
-                else
-                    uci -q set wireless.$vif.ssid="SK-H724G-$n"
-                fi
-                n=$((n + 1))
+                # Preserve the existing SSID and encryption settings.
             done
         fi
         uci -q commit wireless
@@ -172,4 +155,4 @@ early = base / 'etc/uci-defaults/99-skh724g-connectivity'
 if early.exists():
     early.unlink()
 
-print('SK-H724G hardened LAN/DHCP/Wi-Fi recovery patch applied')
+print('SK-H724G hardened LAN/DHCP/Wi-Fi recovery patch applied (SSID preserved)')
