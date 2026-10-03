@@ -8,17 +8,27 @@ network = luci / 'modules/base/luasrc/model/network.lua'
 
 s = wifi.read_text()
 
+# 5 GHz mode / width controls. Only expose capabilities the driver reports.
 old = '''\tmode = s:taboption("advanced", ListValue, "hwmode", translate("Band"))\n\n\tif hw_modes.n then\n'''
-new = '''\tmode = s:taboption("advanced", ListValue, "hwmode", translate("Band"))\n\n\tif hw_modes.ac then\n\t\tmode:value("11a", "5GHz (802.11n+ac)")\n\n\t\thtmode = s:taboption("advanced", ListValue, "htmode", translate("VHT mode (802.11ac)"))\n\t\thtmode:value("", translate("disabled"))\n\t\thtmode:value("VHT20", "20MHz")\n\t\thtmode:value("VHT40", "40MHz")\n\t\thtmode:value("VHT80", "80MHz")\n\n\telseif hw_modes.n then\n'''
+new = '''\tmode = s:taboption("advanced", ListValue, "hwmode", translate("Mode"))\n\n\tif hw_modes.ac then\n\t\tmode:value("11a", "AC")\n\t\tif hw_modes.n then mode:value("11na", "NA") end\n\n\t\thtmode = s:taboption("advanced", ListValue, "htmode", translate("Width"))\n\t\thtmode:value("VHT20", "20 MHz")\n\t\thtmode:value("VHT40", "40 MHz")\n\t\thtmode:value("VHT80", "80 MHz")\n\n\telseif hw_modes.n then\n'''
 if old in s:
     s = s.replace(old, new, 1)
 
+# Make the channel selector read like the requested layout and keep selection
+# limited to frequencies the current driver/regulatory domain marks usable.
+old_label = 'ch = s:taboption("general", Value, "channel", translate("Channel"))'
+if old_label in s:
+    s = s.replace(old_label, 'ch = s:taboption("general", Value, "channel", translate("Operating frequency"))', 1)
+
 needle = '''\tfor _, f in ipairs(iw and iw.freqlist or { }) do\n\t\tif not f.restricted then\n\t\t\tch:value(f.channel, "%i (%.3f GHz)" %{ f.channel, f.mhz / 1000 })\n\t\tend\n\tend\nend\n'''
-insert = '''\tfor _, f in ipairs(iw and iw.freqlist or { }) do\n\t\tif not f.restricted then\n\t\t\tch:value(f.channel, "%i (%.3f GHz)" %{ f.channel, f.mhz / 1000 })\n\t\tend\n\tend\nend\n\n-- Show every frequency reported by the driver, including entries the current\n-- regulatory domain marks restricted. Restricted entries are informational\n-- only; the selectable Channel list above remains limited to usable channels.\nallfreq = s:taboption("general", DummyValue, "_driver_frequencies", translate("Driver Frequency List"))\nfunction allfreq.cfgvalue()\n\tlocal out = { }\n\tfor _, f in ipairs(iw and iw.freqlist or { }) do\n\t\tlocal state = f.restricted and " [restricted]" or ""\n\t\tout[#out+1] = "%i = %.3f GHz%s" %{ f.channel, f.mhz / 1000, state }\n\tend\n\treturn table.concat(out, " | ")\nend\n'''
+insert = '''\tfor _, f in ipairs(iw and iw.freqlist or { }) do\n\t\tif not f.restricted then\n\t\t\tch:value(f.channel, "%i (%i MHz)" %{ f.channel, f.mhz })\n\t\tend\n\tend\nend\n\n-- Show the complete frequency table reported by the Realtek driver. Entries\n-- marked restricted remain informational and are not made selectable here.\nallfreq = s:taboption("general", DummyValue, "_driver_frequencies", translate("Driver Frequency List"))\nallfreq.rawhtml = true\nfunction allfreq.cfgvalue()\n\tlocal out = { }\n\tfor _, f in ipairs(iw and iw.freqlist or { }) do\n\t\tlocal state = f.restricted and " <strong>[restricted]</strong>" or ""\n\t\tout[#out+1] = "%i (%i MHz)%s" %{ f.channel, f.mhz, state }\n\tend\n\treturn table.concat(out, "<br />")\nend\n'''
 if needle in s:
     s = s.replace(needle, insert, 1)
-else:
+elif 'Driver Frequency List' not in s:
     raise SystemExit('Could not find LuCI channel-list block')
+
+# Rename the power label to match the requested UI while retaining driver values.
+s = s.replace('"txpower", translate("Transmit Power"), "dBm")', '"txpower", translate("Maximum transmit power"), "dBm")')
 
 wifi.write_text(s)
 
@@ -36,4 +46,4 @@ if network.exists():
         t = t.replace(old, old + '''\tif l.ac then m = "ac" end\n''', 1)
     network.write_text(t)
 
-print('LuCI Realtek 11n/11ac + full driver frequency display patch applied')
+print('LuCI 5GHz mode/width/channel/power + full driver frequency display patch applied')
