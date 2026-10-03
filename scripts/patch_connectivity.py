@@ -19,6 +19,9 @@ boot() {
 }
 
 start() {
+    [ -f /etc/skh724g-connectivity-ready ] && return 0
+    mkdir /tmp/skh724g-connectivity.lock 2>/dev/null || return 0
+    trap 'rmdir /tmp/skh724g-connectivity.lock 2>/dev/null' EXIT
     exec >>/tmp/skh724g-connectivity.log 2>&1
     echo "SK-H724G connectivity recovery start"
     date
@@ -74,7 +77,7 @@ EOF
             tmp=/tmp/wireless.detected
             : > "$tmp"
             wifi detect > "$tmp" 2>/dev/null || true
-            if grep -q "=wifi-device" "$tmp" 2>/dev/null; then
+            if grep -Eq "^[[:space:]]*config[[:space:]]+wifi-device([[:space:]]|$)" "$tmp" 2>/dev/null; then
                 cp "$tmp" /etc/config/wireless
             fi
         fi
@@ -100,15 +103,13 @@ EOF
                 uci -q set wireless.$sec.mode='ap'
                 uci -q set wireless.$sec.network='lan'
                 uci -q set wireless.$sec.encryption='none'
-                # Keep the driver's/default SSID if one is provided later;
-                # do not force a custom SK-H724G name.
+                uci -q set wireless.$sec.ssid='OpenWrt'
+                # New interface only; preserve existing SSIDs below.
                 n=$((n + 1))
             done
         else
             for vif in $vifs; do
-                uci -q set wireless.$vif.mode='ap'
-                uci -q set wireless.$vif.network='lan'
-                # Preserve the existing SSID and encryption settings.
+                : # Preserve existing mode, network, SSID and encryption.
             done
         fi
         uci -q commit wireless
@@ -143,10 +144,6 @@ init.chmod(0o755)
 defaults = base / 'etc/uci-defaults/99-skh724g-connectivity-late'
 defaults.write_text(r'''#!/bin/sh
 /etc/init.d/skh724g-connectivity enable 2>/dev/null || true
-(
-    sleep 10
-    /etc/init.d/skh724g-connectivity start
-) >/tmp/skh724g-connectivity-bootstrap.log 2>&1 &
 exit 0
 ''')
 defaults.chmod(0o755)
